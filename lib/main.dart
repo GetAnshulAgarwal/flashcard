@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:flip_card/flip_card.dart'; // Import the flip_card package
+import 'package:flip_card/flip_card.dart';
 
 import 'add_edit_flashcard_screen.dart';
 
@@ -112,11 +112,34 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
     }
   }
 
-  void _deleteFlashcard(Flashcard flashcard) {
-    setState(() {
-      flashcards.remove(flashcard);
-    });
-    _saveFlashcards();
+  void _confirmDeleteFlashcard(Flashcard flashcard) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Flashcard'),
+          content: Text('Are you sure you want to delete this flashcard?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog, no deletion
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  flashcards.remove(flashcard); // Delete the flashcard
+                });
+                _saveFlashcards();
+                Navigator.of(context).pop(); // Close dialog after deletion
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -129,7 +152,6 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
         child: flashcards.isEmpty
             ? Text('No flashcards available')
             : Center(
-                // Center the stack of cards in the middle of the screen
                 child: Stack(
                   alignment: Alignment.center,
                   children:
@@ -150,28 +172,61 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
 
   Widget _buildDeckCard(Flashcard flashcard, int index) {
     return Positioned(
-      top: 20.0 * index.toDouble(), // Offset cards slightly based on index
+      top: 20.0 * index.toDouble(),
       child: Dismissible(
         key: UniqueKey(),
+        direction: DismissDirection.horizontal,
+        confirmDismiss: (DismissDirection direction) async {
+          // Show confirmation dialog and return a boolean for dismiss
+          return await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Delete Flashcard'),
+                content:
+                    Text('Are you sure you want to delete this flashcard?'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(false); // Cancel delete
+                    },
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true); // Confirm delete
+                    },
+                    child: Text('Delete'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
         onDismissed: (direction) {
-          _deleteFlashcard(flashcard);
+          _deleteFlashcard(flashcard); // Perform deletion
         },
         child: FlipCard(
-          front:
-              _buildCardSide(flashcard, index, true), // Front side (question)
-          back: _buildCardSide(flashcard, index, false), // Back side (answer)
-          direction: FlipDirection
-              .HORIZONTAL, // You can set this to either HORIZONTAL or VERTICAL
+          front: _buildCardSide(flashcard, index, true),
+          back: _buildCardSide(flashcard, index, false),
+          direction: FlipDirection.HORIZONTAL,
         ),
       ),
     );
   }
 
+  void _deleteFlashcard(Flashcard flashcard) {
+    setState(() {
+      flashcards.remove(flashcard);
+    });
+    _saveFlashcards();
+  }
+
   Widget _buildCardSide(Flashcard flashcard, int index, bool isFront) {
     return Container(
       margin: EdgeInsets.all(16),
-      height: 300, // Fixed height for each card
-      width: 350, // Fixed width for each card
+      height: 300,
+      width: 350,
       decoration: BoxDecoration(
         color: cardColors[index % cardColors.length],
         borderRadius: BorderRadius.circular(15),
@@ -194,7 +249,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                 Text(
                   isFront ? flashcard.question : flashcard.answer,
                   style: TextStyle(
-                    fontSize: 35, // Increased font size
+                    fontSize: 35,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -208,7 +263,6 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
               ],
             ),
           ),
-          // Use Align widget to explicitly position the icon at the bottom-right corner
           Align(
             alignment: Alignment.bottomRight,
             child: Padding(
@@ -217,7 +271,7 @@ class _FlashcardListScreenState extends State<FlashcardListScreen> {
                 icon: Icon(
                   Icons.edit,
                   color: Colors.white,
-                  size: 28, // Increased the size of the edit icon
+                  size: 28,
                 ),
                 onPressed: () => _addOrEditFlashcard(flashcard),
               ),
